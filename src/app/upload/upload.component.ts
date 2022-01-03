@@ -35,6 +35,7 @@ export class UploadComponent implements OnInit {
     name: '',
     comment: '',
     imageLink: '',
+    like: 0,
   };
   afCollection: any;
 

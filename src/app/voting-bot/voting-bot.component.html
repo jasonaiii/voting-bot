@@ -34,15 +34,26 @@
 <div class="container mt-2">
   <div class="text-primary bg-dark">最近吃過:</div>
   <div class="row p-2">
-    <div class="card col-6 py-2" *ngFor="let review of reviews">
+    <div
+      class="card col-6 py-2"
+      *ngFor="let review of reviews; index as i"
+      [attr.data-index]="i"
+    >
       <div class="card__image__wrapper">
-        <img src="{{ review.imageLink }}" class="review__pic" />
+        <img
+          src="{{ review.data.imageLink }}"
+          class="review__pic card-img-top"
+        />
       </div>
       <div class="card-body">
-        <h5 class="card-title">{{ review.name }}</h5>
-        <p class="card-text">{{ review.comment }}</p>
+        <h5 class="card-title">{{ review.data.name }}</h5>
+        <p class="card-text">{{ review.data.comment }}</p>
         <a href="#" class="btn btn-primary">看看評論</a>
+        <div class="btn btn-primary" (click)="addLike($event)">讚</div>
+        <div>{{ review.data.like }}</div>
       </div>
     </div>
   </div>
 </div>
+
+<canvas id="review-chart" width="400" height="400"></canvas>
