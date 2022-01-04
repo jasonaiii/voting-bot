@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
 import {
   Chart,
@@ -9,8 +9,11 @@ import {
   CategoryScale,
   BarElement,
 } from 'chart.js';
-import { CommonElementOptions } from 'chart.js';
-import { Review } from '../../review';
+import { ChartConfiguration, ChartData, ChartType } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
+
+import DataLabelsPlugin from 'chartjs-plugin-datalabels';
+import { Data } from './typing';
 
 Chart.register(LinearScale, BarController, BarElement, CategoryScale);
 
@@ -20,6 +23,51 @@ Chart.register(LinearScale, BarController, BarElement, CategoryScale);
   styleUrls: ['./voting-bot.component.scss'],
 })
 export class VotingBotComponent implements OnInit {
+  @ViewChild(BaseChartDirective) chart: BaseChartDirective | undefined;
+
+  public barChartOptions: ChartConfiguration['options'] = {
+    responsive: true,
+    // We use these empty structures as placeholders for dynamic theming.
+    scales: {
+      x: {},
+      y: {
+        min: 10,
+      },
+    },
+    plugins: {
+      legend: {
+        display: true,
+      },
+      datalabels: {
+        anchor: 'end',
+        align: 'end',
+      },
+    },
+  };
+  public barChartType: ChartType = 'bar';
+  public barChartPlugins = [DataLabelsPlugin];
+
+  // events
+  public chartClicked({
+    event,
+    active,
+  }: {
+    event: MouseEvent;
+    active: {}[];
+  }): void {
+    console.log(event, active);
+  }
+
+  public chartHovered({
+    event,
+    active,
+  }: {
+    event: MouseEvent;
+    active: {}[];
+  }): void {
+    console.log(event, active);
+  }
+
   opened: boolean = false;
   reviews: any[] = [];
 
@@ -27,7 +75,11 @@ export class VotingBotComponent implements OnInit {
 
   async ngOnInit() {
     await this.getReview();
-    this.drawChart();
+    this.updateData();
+    const [resName, resLike] = this.updateData();
+    this.labels = resName;
+    this.data = resLike;
+    this.initChart();
   }
 
   getReviewData() {
@@ -53,25 +105,40 @@ export class VotingBotComponent implements OnInit {
     let targetIndex = event.path[2].attributes[2].value;
     const data = this.getReviewData();
     let id = data[targetIndex].id;
-    this.afs
-      .collection('review')
-      .doc(id)
-      .update({
-        like: (data[targetIndex].data.like += 1),
-      });
-    this.updateChart();
-    this.drawChart();
+    const doc = this.afs.collection('review').doc(id).ref;
+    this.afs.firestore.runTransaction((transaction) =>
+      transaction.get(doc).then((data: any) => {
+        const newLike = data.data().like + 1;
+        transaction.update(doc, { like: newLike });
+      })
+    );
+
+    // doc.update({
+    //   like: (data[targetIndex].data.like += 1),
+    // });
+    const [resName, resLike] = this.updateData();
+    this.labels = resName;
+    this.data = resLike;
+    const update = this.updateChart(resLike);
+    update;
   }
 
-  drawChart() {
-    const canvas = document.querySelector('#review-chart') as HTMLCanvasElement;
-    const ctx = canvas.getContext('2d');
-    const [resName, resLike] = this.updateChart();
-    this.updateAndDrawChart(ctx, resName, resLike);
-    console.log(resLike);
+  public data: number[] = [];
+  public labels: string[] = [];
+  public barChartData: ChartData<'bar'> = {
+    labels: [],
+    datasets: [],
+  };
+
+  initChart() {
+    this.barChartData = {
+      labels: this.labels,
+      datasets: [{ data: this.data, label: '# for votes' }],
+    };
+    return this.barChartData;
   }
 
-  updateChart() {
+  updateData() {
     const data = this.getReviewData();
     let resName = [];
     let resLike = [];
@@ -82,40 +149,10 @@ export class VotingBotComponent implements OnInit {
     return [resName, resLike];
   }
 
-  updateAndDrawChart(target: any, resName: any, resLike: any) {
-    new Chart(<ChartItem>target, {
-      type: 'bar',
-      data: {
-        labels: resName,
-        datasets: [
-          {
-            label: '# of Votes',
-            data: resLike,
-            backgroundColor: [
-              'rgba(255, 99, 132, 1)',
-              'rgba(54, 162, 235, 1)',
-              'rgba(255, 206, 86, 1)',
-              'rgba(75, 192, 192, 1)',
-            ],
-            borderColor: [
-              'rgba(255, 99, 132, 1)',
-              'rgba(54, 162, 235, 1)',
-              'rgba(255, 206, 86, 1)',
-              'rgba(75, 192, 192, 1)',
-              'rgba(153, 102, 255, 1)',
-              'rgba(255, 159, 64, 1)',
-            ],
-            borderWidth: 1,
-          },
-        ],
-      },
-      options: {
-        scales: {
-          y: {
-            beginAtZero: true,
-          },
-        },
-      },
-    });
+  public updateChart(value: any): void {
+    // Only Change 3 values
+    this.barChartData.datasets[0].data = value;
+
+    this.chart?.update();
   }
 }

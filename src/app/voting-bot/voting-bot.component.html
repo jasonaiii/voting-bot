@@ -56,4 +56,17 @@
   </div>
 </div>
 
-<canvas id="review-chart" width="400" height="400"></canvas>
+<!-- <canvas id="review-chart" width="400" height="400"></canvas> -->
+
+<div class="container">
+  <div class="d-block">
+    <canvas
+      baseChart
+      [data]="barChartData"
+      [options]="barChartOptions"
+      [plugins]="barChartPlugins"
+      [type]="barChartType"
+    >
+    </canvas>
+  </div>
+</div>
