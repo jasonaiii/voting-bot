@@ -123,6 +123,7 @@ export class VotingBotComponent implements OnInit {
     );
     this.updateData(targetIndex);
 
+    console.log('123');
     // const [resName, resLike] = this.updateData();
     // console.log(resLike);
     // this.labels = resName;
