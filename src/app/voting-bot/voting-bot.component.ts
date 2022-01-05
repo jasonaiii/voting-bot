@@ -1,5 +1,8 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { AngularFirestore } from '@angular/fire/compat/firestore';
+import {
+  AngularFirestore,
+  DocumentSnapshot,
+} from '@angular/fire/compat/firestore';
 import {
   Chart,
   ChartItem,
@@ -70,15 +73,21 @@ export class VotingBotComponent implements OnInit {
 
   opened: boolean = false;
   reviews: any[] = [];
+  public data: number[] = [];
+  public labels: string[] = [];
+  public barChartData: ChartData<'bar'> = {
+    labels: [],
+    datasets: [],
+  };
 
   constructor(private afs: AngularFirestore) {}
 
   async ngOnInit() {
     await this.getReview();
-    this.updateData();
-    const [resName, resLike] = this.updateData();
-    this.labels = resName;
-    this.data = resLike;
+    // this.updateData();
+    // const [resName, resLike] = this.updateData();
+    // this.labels = resName;
+    // this.data = resLike;
     this.initChart();
   }
 
@@ -101,34 +110,26 @@ export class VotingBotComponent implements OnInit {
       });
   }
 
-  addLike(event: any) {
+  async addLike(event: any) {
     let targetIndex = event.path[2].attributes[2].value;
     const data = this.getReviewData();
     let id = data[targetIndex].id;
     const doc = this.afs.collection('review').doc(id).ref;
-    this.afs.firestore.runTransaction((transaction) =>
+    await this.afs.firestore.runTransaction((transaction) =>
       transaction.get(doc).then((data: any) => {
         const newLike = data.data().like + 1;
         transaction.update(doc, { like: newLike });
       })
     );
+    this.updateData(targetIndex);
 
-    // doc.update({
-    //   like: (data[targetIndex].data.like += 1),
-    // });
-    const [resName, resLike] = this.updateData();
-    this.labels = resName;
-    this.data = resLike;
-    const update = this.updateChart(resLike);
-    update;
+    // const [resName, resLike] = this.updateData();
+    // console.log(resLike);
+    // this.labels = resName;
+    // this.data = resLike;
+    // const update = this.updateChart(resLike);
+    // update;
   }
-
-  public data: number[] = [];
-  public labels: string[] = [];
-  public barChartData: ChartData<'bar'> = {
-    labels: [],
-    datasets: [],
-  };
 
   initChart() {
     this.barChartData = {
@@ -138,15 +139,29 @@ export class VotingBotComponent implements OnInit {
     return this.barChartData;
   }
 
-  updateData() {
-    const data = this.getReviewData();
-    let resName = [];
-    let resLike = [];
-    for (let ele of data) {
-      resName.push(ele.data.name);
-      resLike.push(ele.data.like);
-    }
-    return [resName, resLike];
+  updateData(index: number) {
+    let newData;
+    this.afs
+      .collection('review')
+      .snapshotChanges()
+      .subscribe((data: any) => {
+        this.reviews[index].data.like = data[index].payload.doc.data().like;
+        for (let index of data) {
+          const snapshotData = index.payload.doc.data();
+          newData = snapshotData.map((element: any) => {
+            return element;
+          });
+        }
+      });
+    console.log(newData);
+    // const data = this.getReviewData();
+    // let resName = [];
+    // let resLike = [];
+    // for (let ele of data) {
+    //   resName.push(ele.data.name);
+    //   resLike.push(ele.data.like);
+    // }
+    // return [resName, resLike];
   }
 
   public updateChart(value: any): void {
